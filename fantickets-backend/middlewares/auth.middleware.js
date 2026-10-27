@@ -3,7 +3,11 @@ const Customer = require('../models/customer.model');
 
 const protect = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
+        const token =
+            req.cookies?.token ||
+            (req.headers.authorization?.startsWith('Bearer ')
+                ? req.headers.authorization.split(' ')[1]
+                : null);
 
         if (!token) {
             return res.status(401).json({ success: false, message: "Unauthorized - No token provided" });

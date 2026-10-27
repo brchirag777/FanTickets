@@ -11,10 +11,46 @@ const customerRoutes = require('./routes/customer.routes');
 const ticketRoutes = require('./routes/ticket.routes');
 // 2. Initialize App
 const app = express();
+
+// Trust reverse proxy (essential for secure cookies on Render / Heroku / Cloudflare)
+app.set('trust proxy', 1);
+
 // 3. Global Middlewares
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://fantickets-frontend.vercel.app',
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (curl, server-to-server, mobile)
+        if (!origin) return callback(null, true);
+        if (
+            process.env.NODE_ENV !== 'production' ||
+            allowedOrigins.includes(origin) ||
+            origin.endsWith('.vercel.app') ||
+            origin.endsWith('.netlify.app') ||
+            origin.endsWith('.onrender.com')
+        ) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
+
+// Root & Health check
+app.get('/', (req, res) => {
+    res.status(200).send('FanTickets API is running smoothly.');
+});
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', service: 'fantickets-backend' });
+});
+
 // 4. Mount Routes 
 app.use('/customers', customerRoutes);
 app.use('/tickets', ticketRoutes);
