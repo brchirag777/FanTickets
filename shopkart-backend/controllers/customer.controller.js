@@ -123,3 +123,36 @@ exports.changePassword = async (req, res) => {
          res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// Bonus Task: Update Profile (Full Name & Phone)
+exports.updateProfile = async (req, res) => {
+    try {
+        const { fullName, phone } = req.body;
+        if (!fullName || !phone) {
+            return res.status(400).json({ success: false, message: "Full Name and Phone are required" });
+        }
+
+        const customer = await Customer.findById(req.user._id);
+        if (!customer) {
+            return res.status(404).json({ success: false, message: "Customer not found" });
+        }
+
+        customer.fullName = fullName.trim();
+        customer.phone = phone.trim();
+        await customer.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            customer: {
+                _id: customer._id,
+                fullName: customer.fullName,
+                email: customer.email,
+                phone: customer.phone
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+

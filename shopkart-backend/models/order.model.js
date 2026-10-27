@@ -21,6 +21,11 @@ const orderSchema = new mongoose.Schema(
                 image: { type: String }
             }
         ],
+        attendeeDetails: {
+            fullName: { type: String, required: true },
+            email: { type: String, required: true },
+            govIdLast4: { type: String, required: true }
+        },
         totalAmount: {
             type: Number,
             required: true

@@ -21,7 +21,11 @@ const SellTicket = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const overFaceValue =
+    const maxAllowedPrice = formData.originalFaceValue !== '' && Number(formData.originalFaceValue) > 0 
+        ? Number(formData.originalFaceValue) * 1.20 
+        : null;
+    const exceedsMarkupLimit = maxAllowedPrice !== null && formData.price !== '' && Number(formData.price) > maxAllowedPrice;
+    const overFaceValue = !exceedsMarkupLimit &&
         formData.price !== '' && formData.originalFaceValue !== '' &&
         Number(formData.price) > Number(formData.originalFaceValue);
 
@@ -41,6 +45,11 @@ const SellTicket = () => {
         if (!Number.isInteger(stock) || stock < 1) return setError('Quantity must be a whole number of at least 1.');
         if (formData.originalFaceValue === '' || originalFaceValue < 0) {
             return setError('Original face value must be 0 or more.');
+        }
+
+        // Anti-Scalping Rule: Maximum 120% of original face value
+        if (originalFaceValue > 0 && price > originalFaceValue * 1.20) {
+            return setError(`Anti-Scalping Rule: Resale price cannot exceed 120% of original face value (Max allowed: ₹${(originalFaceValue * 1.20).toFixed(0)}).`);
         }
 
         setLoading(true);
@@ -213,6 +222,12 @@ const SellTicket = () => {
                     </div>
                 </div>
 
+                {exceedsMarkupLimit && (
+                    <div className="p-3 text-sm text-red-300 border rounded-lg bg-red-500/15 border-red-500/40">
+                        🚫 <strong>Anti-Scalping Rule:</strong> Our fan-to-fan platform caps resale prices at <strong>120%</strong> of original face value. The maximum allowed asking price is <strong>₹{maxAllowedPrice.toFixed(0)}</strong>.
+                    </div>
+                )}
+
                 {overFaceValue && (
                     <p className="text-sm text-amber-400">
                         ⚠️ Your asking price is above face value. Buyers will see the markup on your listing.
@@ -221,10 +236,10 @@ const SellTicket = () => {
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || exceedsMarkupLimit}
                     className="w-full py-3 mt-2 font-bold text-white transition-all rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? 'Listing...' : '🎫 List Ticket'}
+                    {loading ? 'Listing...' : (exceedsMarkupLimit ? 'Price Exceeds 120% Cap' : '🎫 List Ticket')}
                 </button>
             </form>
         </div>

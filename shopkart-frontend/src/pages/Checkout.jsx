@@ -1,20 +1,38 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { formatPrice } from '../utils/format';
 import axios from 'axios';
+
+const inputClass =
+    "w-full p-3 text-white bg-zinc-950 border border-zinc-700 rounded-lg placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500";
+const labelClass = "block mb-1 text-sm font-medium text-zinc-300";
 
 const Checkout = () => {
     const { cart, subtotal, clearCart } = useCart();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        fullName: '', phone: '', addressLine1: '', city: '', state: '', pincode: ''
+        fullName: '',
+        email: '',
+        govIdLast4: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'fullName') {
+            // Strip any numeric characters so numbers cannot be typed or pasted
+            const sanitizedValue = value.replace(/[0-9]/g, '');
+            if (sanitizedValue !== value) {
+                setError("Numbers are not allowed in the Attendee Name field.");
+            } else if (error === "Numbers are not allowed in the Attendee Name field.") {
+                setError('');
+            }
+            return setFormData({ ...formData, [name]: sanitizedValue });
+        }
+        setFormData({ ...formData, [name]: value });
     };
 
     // Helper to dynamically load the Razorpay SDK script
@@ -32,26 +50,39 @@ const Checkout = () => {
         e.preventDefault();
         setError('');
 
-        // Strict Client-Side Form Validation
-        const phoneRegex = /^[0-9]{10}$/;
-        const pinRegex = /^[0-9]{6}$/;
+        // Strict Client-Side Validation for Attendee Transfer Details
+        const nameRegex = /^[a-zA-Z\s.'-]+$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const idRegex = /^[0-9]{4}$/;
 
-        if (!formData.fullName.trim() || !formData.addressLine1.trim() || !formData.city.trim() || !formData.state.trim()) {
-            return setError("All fields are required and cannot be empty.");
+        const trimmedName = formData.fullName.trim();
+        if (!trimmedName) {
+            return setError("Attendee full name is required.");
         }
-        if (!phoneRegex.test(formData.phone.trim())) {
-            return setError("Phone number must be exactly 10 digits.");
+        if (/\d/.test(trimmedName)) {
+            return setError("Attendee full name cannot contain numbers.");
         }
-        if (!pinRegex.test(formData.pincode.trim())) {
-            return setError("Pincode must be exactly 6 digits.");
+        if (!nameRegex.test(trimmedName) || trimmedName.length < 2) {
+            return setError("Attendee full name must contain only letters (no numbers or special characters).");
         }
+        if (!emailRegex.test(formData.email.trim())) {
+            return setError("Please provide a valid email address for digital ticket delivery.");
+        }
+        if (!idRegex.test(formData.govIdLast4.trim())) {
+            return setError("Government ID last 4 digits must be exactly 4 numerical digits.");
+        }
+
 
         setLoading(true);
 
         try {
             // Call our backend to create the pending order & Razorpay order
             const orderRes = await axios.post('http://localhost:5001/orders/create-payment-order', {
-                shippingAddress: formData
+                attendeeDetails: {
+                    fullName: formData.fullName.trim(),
+                    email: formData.email.trim(),
+                    govIdLast4: formData.govIdLast4.trim()
+                }
             }, { withCredentials: true });
 
             const orderData = orderRes.data;
@@ -60,19 +91,19 @@ const Checkout = () => {
             const isLoaded = await loadRazorpayScript();
             if (!isLoaded) {
                 setLoading(false);
-                return setError("Failed to load Razorpay SDK. Check your connection.");
+                return setError("Failed to load Razorpay payment gateway. Please check your internet connection.");
             }
 
             const options = {
                 key: orderData.key,
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "ShopKart",
-                description: "Test Transaction",
+                name: "FanTickets",
+                description: "Digital Concert Ticket Transfer",
                 order_id: orderData.razorpayOrderId,
                 handler: async function (response) {
                     try {
-                        // Verify Payment Signature on our backend
+                        // Verify Payment Signature on backend
                         const verifyRes = await axios.post('http://localhost:5001/orders/verify-payment', {
                             shopKartOrderId: orderData.shopKartOrderId,
                             razorpay_order_id: response.razorpay_order_id,
@@ -81,84 +112,153 @@ const Checkout = () => {
                         }, { withCredentials: true });
 
                         if (verifyRes.data.success) {
-                            clearCart(); // Wipe the global cart instantly
-                            navigate('/orders'); // Send them to the success/history page
+                            clearCart();
+                            navigate('/orders');
                         }
                     } catch (err) {
-                        alert("Payment verification failed! Your cart is safe. Please contact support.");
+                        alert("Payment verification failed! Please contact support.");
                     }
                 },
                 prefill: {
                     name: formData.fullName,
-                    contact: formData.phone
+                    email: formData.email
                 },
-                theme: { color: "#2563eb" } // Matches our blue theme
+                theme: { color: "#d946ef" } // Fuchsia concert accent
             };
 
             const paymentObject = new window.Razorpay(options);
-            paymentObject.on('payment.failed', function (response) {
-                alert("Payment failed or cancelled! Please try again.");
+            paymentObject.on('payment.failed', function () {
+                alert("Payment was cancelled or failed. Please try again.");
             });
             paymentObject.open();
-            
+
         } catch (err) {
             setError(err.response?.data?.message || "Failed to initiate checkout.");
         } finally {
-            setLoading(false); 
+            setLoading(false);
         }
     };
 
     if (cart.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-64 gap-4 mt-10 text-center">
-                <h2 className="text-2xl font-bold text-gray-800">Your cart is empty</h2>
-                <button onClick={() => navigate('/products')} className="px-6 py-2 mt-4 text-white transition-colors bg-gray-800 rounded hover:bg-gray-900">
-                    Browse Products
-                </button>
+            <div className="flex flex-col items-center justify-center h-64 gap-4 px-4 mt-10 text-center">
+                <div className="text-5xl">🎫</div>
+                <h2 className="text-2xl font-bold text-white">Your cart is empty</h2>
+                <p className="text-zinc-400">Choose tickets to your favorite concert before checking out.</p>
+                <Link to="/tickets" className="px-6 py-2 mt-4 text-white transition-colors rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500">
+                    Browse Tickets
+                </Link>
             </div>
         );
     }
 
     return (
         <div className="max-w-6xl p-4 mx-auto mt-8">
-            <h1 className="mb-8 text-3xl font-bold text-gray-800">Checkout</h1>
-            
-            <div className="flex flex-col gap-8 lg:flex-row">
-                <div className="flex-grow p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-                    <h2 className="mb-6 text-xl font-bold text-gray-800">Shipping Details</h2>
-                    {error && <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded">{error}</div>}
-                    
-                    <form onSubmit={handlePlaceOrder} className="flex flex-col gap-4">
-                        <input type="text" name="fullName" placeholder="Full Name" value={formData.fullName} onChange={handleChange} className="w-full p-3 border rounded" />
-                        <input type="text" name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} maxLength="10" className="w-full p-3 border rounded" />
-                        <input type="text" name="addressLine1" placeholder="Address Line 1" value={formData.addressLine1} onChange={handleChange} className="w-full p-3 border rounded" />
-                        
-                        <div className="flex gap-4">
-                            <input type="text" name="city" placeholder="City" value={formData.city} onChange={handleChange} className="w-full p-3 border rounded" />
-                            <input type="text" name="state" placeholder="State" value={formData.state} onChange={handleChange} className="w-full p-3 border rounded" />
-                        </div>
-                        <input type="text" name="pincode" placeholder="6-Digit Pincode" value={formData.pincode} onChange={handleChange} maxLength="6" className="w-full p-3 border rounded" />
+            <h1 className="mb-2 text-3xl font-extrabold text-white">Checkout</h1>
+            <p className="mb-8 text-zinc-400">Complete attendee transfer details for your digital concert tickets.</p>
 
-                        <button type="submit" disabled={loading} className="w-full py-3 mt-4 font-bold text-white transition-colors bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400">
-                            {loading ? 'Processing...' : 'Pay with Razorpay'}
+            <div className="flex flex-col gap-8 lg:flex-row">
+                <div className="flex-grow p-6 border bg-zinc-900 border-zinc-800 rounded-xl shadow-lg">
+                    <div className="flex items-center gap-3 mb-6">
+                        <span className="text-2xl">🎟️</span>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Attendee Transfer Details</h2>
+                            <p className="text-xs text-zinc-400">Digital tickets will be officially transferred and matched against this attendee ID at venue gates.</p>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div className="p-3 mb-6 text-sm text-red-300 border rounded-lg bg-red-500/10 border-red-500/30">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handlePlaceOrder} className="flex flex-col gap-4">
+                        <div>
+                            <label htmlFor="fullName" className={labelClass}>Attendee Full Name (As per Govt ID)</label>
+                            <input 
+                                id="fullName"
+                                type="text" 
+                                name="fullName" 
+                                placeholder="e.g. Rahul Sharma" 
+                                value={formData.fullName} 
+                                onChange={handleChange} 
+                                className={inputClass} 
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="email" className={labelClass}>Transfer Email Address</label>
+                            <input 
+                                id="email"
+                                type="email" 
+                                name="email" 
+                                placeholder="e.g. rahul@example.com (Ticket will be transferred here)" 
+                                value={formData.email} 
+                                onChange={handleChange} 
+                                className={inputClass} 
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="govIdLast4" className={labelClass}>Government ID Last 4 Digits</label>
+                            <input 
+                                id="govIdLast4"
+                                type="text" 
+                                name="govIdLast4" 
+                                placeholder="Last 4 digits of Aadhaar, Passport, or Voter ID" 
+                                value={formData.govIdLast4} 
+                                onChange={handleChange} 
+                                maxLength="4" 
+                                className={inputClass} 
+                                required
+                            />
+                            <p className="mt-1 text-xs text-zinc-500">Required for fan identity verification at stadium entry gates.</p>
+                        </div>
+
+                        <div className="p-4 mt-2 border rounded-lg bg-zinc-950/60 border-zinc-800">
+                            <p className="text-xs text-zinc-400">
+                                🔒 <strong>Safe Fan Transfer:</strong> Digital tickets are delivered directly upon confirmed payment. Physical shipping is not required.
+                            </p>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="w-full py-3 mt-4 font-bold text-white transition-all rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Processing Transfer...' : `Proceed to Pay ${formatPrice(subtotal)}`}
                         </button>
                     </form>
                 </div>
 
-                <div className="w-full h-fit lg:w-1/3 sticky top-6">
-                    <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <h2 className="mb-4 text-xl font-bold text-gray-800">Order Summary</h2>
+                <div className="sticky w-full h-fit lg:w-1/3 top-6">
+                    <div className="p-6 border bg-zinc-900 border-zinc-800 rounded-xl shadow-lg">
+                        <h2 className="mb-4 text-xl font-bold text-white">Order Summary</h2>
                         <div className="flex flex-col gap-4 mb-6">
-                            {cart.map((item) => (
-                                <div key={item.product._id} className="flex justify-between text-gray-600">
-                                    <span>{item.product.name} <span className="font-semibold text-gray-800">x {item.quantity}</span></span>
-                                    <span>₹{item.product.price * item.quantity}</span>
-                                </div>
-                            ))}
+                            {cart.map((item) => {
+                                const ticket = item.product || item.ticket;
+                                if (!ticket) return null;
+                                return (
+                                    <div key={ticket._id} className="flex justify-between text-sm text-zinc-300">
+                                        <div className="pr-2">
+                                            <p className="font-semibold text-white">{ticket.name}</p>
+                                            <p className="text-xs text-zinc-500">Sec {ticket.section} · Qty {item.quantity}</p>
+                                        </div>
+                                        <span className="font-bold text-fuchsia-400 shrink-0">
+                                            {formatPrice(ticket.price * item.quantity)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <div className="flex justify-between pt-4 text-xl font-bold text-gray-800 border-t">
-                            <span>Total:</span>
-                            <span>₹{subtotal.toLocaleString()}</span>
+                        <div className="flex justify-between pt-4 text-xl font-bold text-white border-t border-zinc-800">
+                            <span>Total Amount:</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-violet-400">
+                                {formatPrice(subtotal)}
+                            </span>
                         </div>
                     </div>
                 </div>

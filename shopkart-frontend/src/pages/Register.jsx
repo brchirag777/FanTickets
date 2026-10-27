@@ -1,28 +1,63 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const Register = () => {
     const navigate = useNavigate();
+    const { refreshUser } = useAuth();
+    const { fetchCart } = useCart();
+
     const [formData, setFormData] = useState({
         fullName: '', email: '', password: '', phone: ''
     });
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'fullName') {
+            const sanitizedValue = value.replace(/[0-9]/g, '');
+            if (sanitizedValue !== value) {
+                setError('Numbers are not allowed in the Full Name field.');
+            } else if (error === 'Numbers are not allowed in the Full Name field.') {
+                setError('');
+            }
+            return setFormData({ ...formData, [name]: sanitizedValue });
+        }
+        setFormData({ ...formData, [name]: value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        const trimmedName = formData.fullName.trim();
+        if (!trimmedName) {
+            return setError('Full Name is required.');
+        }
+        if (/\d/.test(trimmedName)) {
+            return setError('Full name cannot contain numbers.');
+        }
+        if (!/^[a-zA-Z\s.'-]+$/.test(trimmedName)) {
+            return setError('Full name must contain only letters.');
+        }
+
+        setLoading(true);
         try {
             await api.post('/customers/register', formData);
-            navigate('/login');
+            if (refreshUser) await refreshUser();
+            if (fetchCart) await fetchCart();
+            navigate('/tickets');
+
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setLoading(false);
         }
     };
+
 
     return (
         <div className="flex items-center justify-center min-h-[75vh] px-4">
@@ -83,9 +118,10 @@ const Register = () => {
 
                     <button 
                         type="submit" 
-                        className="w-full py-3 font-bold text-white transition-all rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500"
+                        disabled={loading}
+                        className="w-full py-3 font-bold text-white transition-all rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 disabled:opacity-50"
                     >
-                        Create Account
+                        {loading ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
 

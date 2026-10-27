@@ -22,13 +22,13 @@ const customerSchema = new mongoose.Schema({
     },
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product'
+        ref: 'Ticket'
     }],
     cart: [
         {
             product: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: 'Product',
+                ref: 'Ticket',
                 required: true
             },
             quantity: {

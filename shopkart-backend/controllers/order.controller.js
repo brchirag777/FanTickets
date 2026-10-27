@@ -1,13 +1,29 @@
 const Order = require('../models/order.model.js');
 const Customer = require('../models/customer.model.js');
+const Ticket = require('../models/ticket.model.js');
 const razorpay = require('../config/razorpay.js');
 const crypto = require('crypto'); 
 
 
 const createPaymentOrder = async (req, res) => {
     try {
-        const { shippingAddress } = req.body;
-        const customerId = req.user.id; 
+        const { attendeeDetails } = req.body;
+        const customerId = req.user._id || req.user.id; 
+
+        // Validate Attendee Transfer Details
+        if (!attendeeDetails || !attendeeDetails.fullName || !attendeeDetails.email || !attendeeDetails.govIdLast4) {
+            return res.status(400).json({ 
+                message: "Attendee Transfer Details (Full Name, Email, and Government ID Last 4 Digits) are required." 
+            });
+        }
+
+        // Validate that attendee full name contains no numbers
+        if (/\d/.test(attendeeDetails.fullName) || !/^[a-zA-Z\s.'-]+$/.test(attendeeDetails.fullName.trim())) {
+            return res.status(400).json({
+                message: "Attendee Full Name must contain only letters (no numbers or special characters allowed)."
+            });
+        }
+
 
         // 1. Fetch user and instantly populate the cart with fresh product data
         const customer = await Customer.findById(customerId).populate('cart.product');
@@ -30,12 +46,19 @@ const createPaymentOrder = async (req, res) => {
                 });
             }
 
+            // Self-purchase prevention
+            if (product.seller && product.seller.toString() === customerId.toString()) {
+                return res.status(400).json({
+                    message: `You cannot purchase your own ticket listing (${product.name}). Please remove it from your cart.`
+                });
+            }
+
             // Trust ONLY the server price, ignore anything from the frontend
             totalAmount += product.price * item.quantity;
 
             // Build the unchangeable historical snapshot for the receipt
             orderItems.push({
-                product: product._id,
+                ticket: product._id,
                 name: product.name,
                 price: product.price,
                 quantity: item.quantity,
@@ -47,7 +70,11 @@ const createPaymentOrder = async (req, res) => {
         const shopKartOrder = new Order({
             user: customerId,
             items: orderItems,
-            shippingAddress,
+            attendeeDetails: {
+                fullName: attendeeDetails.fullName.trim(),
+                email: attendeeDetails.email.trim(),
+                govIdLast4: attendeeDetails.govIdLast4.trim()
+            },
             totalAmount,
             status: "PENDING_PAYMENT",
             paymentStatus: "PENDING"
@@ -106,8 +133,15 @@ const verifyPayment = async (req, res) => {
         order.razorpayPaymentId = razorpay_payment_id;
         await order.save();
 
+        // Decrement ticket stock
+        for (const item of order.items) {
+            if (item.ticket) {
+                await Ticket.findByIdAndUpdate(item.ticket, { $inc: { stock: -item.quantity } });
+            }
+        }
+
         // Clear the user's cart ONLY after payment is verified
-        const customer = await Customer.findById(req.user.id);
+        const customer = await Customer.findById(req.user._id || req.user.id);
         customer.cart = [];
         await customer.save();
 
@@ -124,7 +158,7 @@ const getMyOrders = async (req, res) => {
         const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
         res.status(200).json({ success: true, orders });
     } catch (error) {
-        console.error("Fetch orders error:", error); // Added this to see the exact issue
+        console.error("Fetch orders error:", error);
         res.status(500).json({ message: "Failed to fetch orders" });
     }
 };
@@ -137,8 +171,9 @@ const getOrderById = async (req, res) => {
         
         if (!order) return res.status(404).json({ message: "Order not found" });
         
-        //Prevent users from guessing IDs to view other people's orders
-        if (order.user.toString() !== req.customer.id) {
+        // Prevent users from guessing IDs to view other people's orders
+        const userId = req.user._id || req.user.id;
+        if (order.user.toString() !== userId.toString()) {
             return res.status(403).json({ message: "Not authorized to view this order" });
         }
 
@@ -147,6 +182,7 @@ const getOrderById = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch order details" });
     }
 };
+
 
 module.exports = { 
     createPaymentOrder, 

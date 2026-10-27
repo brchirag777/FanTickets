@@ -1,5 +1,5 @@
 const Customer = require('../models/customer.model.js');
-const Product = require('../models/product.model.js');
+const Ticket = require('../models/ticket.model.js');
 
 // 1. ADD TO CART
 const addToCart = async (req, res) => {
@@ -7,8 +7,16 @@ const addToCart = async (req, res) => {
         const { productId } = req.params;
         const customerId = req.user._id;
 
-        const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+        const product = await Ticket.findById(productId);
+        if (!product) return res.status(404).json({ success: false, message: "Ticket not found" });
+
+        // Seller check: Prevent seller from adding their own ticket listing to cart
+        if (product.seller && product.seller.toString() === customerId.toString()) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "You cannot purchase or add your own ticket listing to cart." 
+            });
+        }
 
         const customer = await Customer.findById(customerId);
         
@@ -55,8 +63,8 @@ const updateQuantity = async (req, res) => {
 
         if (quantity < 1) return res.status(400).json({ success: false, message: "Quantity must be at least 1" });
 
-        const product = await Product.findById(productId);
-        if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+        const product = await Ticket.findById(productId);
+        if (!product) return res.status(404).json({ success: false, message: "Ticket not found" });
 
         if (quantity > product.stock) {
             return res.status(400).json({ success: false, message: "Cannot exceed available stock" });

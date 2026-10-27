@@ -8,9 +8,8 @@ const NavBar = () => {
     const navigate = useNavigate();
     const [wishlistCount, setWishlistCount] = useState(0);
     
-    // Pull clearCart from the Context
     const { cartCount, clearCart } = useCart();
-    const { isLoggedIn, authLoading, logout } = useAuth();
+    const { user, isLoggedIn, authLoading, logout } = useAuth();
 
     useEffect(() => {
         if (!isLoggedIn) {
@@ -45,14 +44,14 @@ const NavBar = () => {
     };
 
     return (
-        <nav className="text-white border-b shadow-md bg-zinc-900 border-zinc-800">
+        <nav className="text-white border-b shadow-lg bg-zinc-900 border-zinc-800 sticky top-0 z-50">
             <div className="max-w-6xl px-4 mx-auto">
                 <div className="flex items-center justify-between h-16">
-                    <Link to="/tickets" className="text-xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-violet-400">
-                        🎸 FanTickets
+                    <Link to="/tickets" className="text-xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-violet-400 flex items-center gap-2">
+                        <span>🎸</span> FanTickets
                     </Link>
 
-                    <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-5 text-sm">
                         <Link to="/tickets" className="transition-colors hover:text-fuchsia-400">
                             Tickets
                         </Link>
@@ -62,29 +61,44 @@ const NavBar = () => {
 
                         {!authLoading && isLoggedIn ? (
                             <>
-                                <Link to="/orders" className="font-medium transition-colors hover:text-green-400">
+                                <Link to="/my-listings" className="font-medium transition-colors hover:text-fuchsia-400">
+                                    My Listings
+                                </Link>
+                                <Link to="/orders" className="font-medium transition-colors hover:text-emerald-400">
                                     Orders
                                 </Link>
                                 <Link to="/wishlist" className="font-medium transition-colors hover:text-pink-400">
-                                    Wishlist ({wishlistCount})
+                                    Wishlist {wishlistCount > 0 && <span className="px-1.5 py-0.5 text-xs rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30">{wishlistCount}</span>}
                                 </Link>
                                 <Link to="/cart" className="font-medium transition-colors hover:text-blue-400">
-                                    Cart ({cartCount})
+                                    Cart {cartCount > 0 && <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">{cartCount}</span>}
+                                </Link>
+                                <Link to="/profile" className="flex items-center gap-1.5 font-medium transition-colors hover:text-violet-400">
+                                    <span>👤</span>
+                                    <span>{user?.fullName ? user.fullName.split(' ')[0] : 'Profile'}</span>
                                 </Link>
                                 <button 
                                     onClick={handleLogout} 
-                                    className="px-4 py-2 transition-colors border rounded-md bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-red-400"
+                                    className="px-3 py-1.5 transition-colors border rounded-md bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-red-400 text-xs font-semibold"
                                 >
                                     Logout
                                 </button>
                             </>
                         ) : !authLoading ? (
-                            <Link 
-                                to="/login" 
-                                className="px-4 py-2 font-semibold text-white transition-all rounded-md bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500"
-                            >
-                                Login
-                            </Link>
+                            <div className="flex items-center gap-3">
+                                <Link 
+                                    to="/login" 
+                                    className="px-4 py-2 font-semibold text-white transition-all rounded-md bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-md"
+                                >
+                                    Login
+                                </Link>
+                                <Link 
+                                    to="/register" 
+                                    className="px-3.5 py-2 font-medium text-zinc-300 transition-colors border rounded-md border-zinc-700 hover:bg-zinc-800 hover:text-white"
+                                >
+                                    Register
+                                </Link>
+                            </div>
                         ) : null}
                     </div>
                 </div>
