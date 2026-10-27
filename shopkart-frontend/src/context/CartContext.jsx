@@ -55,17 +55,25 @@ export const CartProvider = ({ children }) => {
         setCart([]);
     };
 
-    const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+    const isInCart = (ticketId) => {
+        return cart.some(item => {
+            const itemTicketId = item.product?._id || item.product || item.ticket?._id || item.ticket;
+            return itemTicketId === ticketId;
+        });
+    };
+
+    const cartCount = cart.reduce((total, item) => total + (item.quantity || 0), 0);
     const subtotal = cart.reduce((total, item) => {
-        if (item.product && item.product.price) {
-            return total + (item.product.price * item.quantity);
+        const itemObj = item.product || item.ticket;
+        if (itemObj && itemObj.price) {
+            return total + (itemObj.price * item.quantity);
         }
         return total;
     }, 0);
     
     return (
         <CartContext.Provider value={{ 
-            cart, loading, cartCount, subtotal, 
+            cart, loading, cartCount, subtotal, isInCart,
             addToCart, updateQuantity, removeFromCart, fetchCart, clearCart 
         }}>
             {children}

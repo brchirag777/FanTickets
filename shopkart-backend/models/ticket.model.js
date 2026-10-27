@@ -12,7 +12,7 @@ const ticketSchema = new mongoose.Schema({
     },
     image: {
         type: String,
-        required: true
+        default: ''
     },
     stock: {
         type: Number,

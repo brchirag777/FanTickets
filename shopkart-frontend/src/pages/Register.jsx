@@ -25,25 +25,72 @@ const Register = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-                <h2 className="text-2xl font-bold text-center text-gray-800">Create ShopKart Account</h2>
-                {error && <div className="p-3 text-sm text-red-600 bg-red-100 rounded">{error}</div>}
+        <div className="flex items-center justify-center min-h-[75vh] px-4">
+            <div className="w-full max-w-md p-8 space-y-6 border bg-zinc-900 border-zinc-800 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-bold text-center text-white">Create Account</h2>
+                {error && <div className="p-3 text-sm text-red-300 border rounded-lg bg-red-500/10 border-red-500/30">{error}</div>}
+                
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input type="text" name="fullName" placeholder="Full Name" required 
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-blue-500" onChange={handleChange} />
-                    <input type="email" name="email" placeholder="Email" required 
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-blue-500" onChange={handleChange} />
-                    <input type="password" name="password" placeholder="Password (min 6 chars)" required minLength="6"
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-blue-500" onChange={handleChange} />
-                    <input type="tel" name="phone" placeholder="Phone Number" required 
-                        className="w-full p-2 border border-gray-300 rounded focus:outline-blue-500" onChange={handleChange} />
-                    <button type="submit" className="w-full p-2 text-white bg-blue-600 rounded hover:bg-blue-700">
+                    <div>
+                        <label className="block mb-1 text-sm font-medium text-zinc-300">Full Name</label>
+                        <input 
+                            type="text" 
+                            name="fullName" 
+                            placeholder="e.g. Rahul Sharma" 
+                            required 
+                            className="w-full p-3 text-white border rounded-lg bg-zinc-950 border-zinc-700 placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500" 
+                            onChange={handleChange} 
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-1 text-sm font-medium text-zinc-300">Email Address</label>
+                        <input 
+                            type="email" 
+                            name="email" 
+                            placeholder="e.g. rahul@example.com" 
+                            required 
+                            className="w-full p-3 text-white border rounded-lg bg-zinc-950 border-zinc-700 placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500" 
+                            onChange={handleChange} 
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-1 text-sm font-medium text-zinc-300">Password</label>
+                        <input 
+                            type="password" 
+                            name="password" 
+                            placeholder="Min. 6 characters" 
+                            required 
+                            minLength="6"
+                            className="w-full p-3 text-white border rounded-lg bg-zinc-950 border-zinc-700 placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500" 
+                            onChange={handleChange} 
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-1 text-sm font-medium text-zinc-300">Phone Number</label>
+                        <input 
+                            type="tel" 
+                            name="phone" 
+                            placeholder="10-digit mobile number (e.g. 9876543210)" 
+                            required 
+                            maxLength="10"
+                            className="w-full p-3 text-white border rounded-lg bg-zinc-950 border-zinc-700 placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500" 
+                            onChange={handleChange} 
+                        />
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        className="w-full py-3 font-bold text-white transition-all rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500"
+                    >
                         Create Account
                     </button>
                 </form>
-                <p className="text-sm text-center text-gray-600">
-                    Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Log in</Link>
+
+                <p className="text-sm text-center text-zinc-400">
+                    Already have an account? <Link to="/login" className="text-fuchsia-400 hover:underline">Log in</Link>
                 </p>
             </div>
         </div>
