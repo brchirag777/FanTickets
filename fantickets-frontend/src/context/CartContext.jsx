@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const CartContext = createContext();
 
@@ -9,7 +9,7 @@ export const CartProvider = ({ children }) => {
 
     const fetchCart = async () => {
         try {
-            const response = await axios.get('http://localhost:5001/cart', { withCredentials: true });
+            const response = await api.get('/cart');
             setCart(response.data.cart || []);
         } catch (error) {
             console.error("Failed to fetch cart");
@@ -24,7 +24,7 @@ export const CartProvider = ({ children }) => {
 
     const addToCart = async (productId) => {
         try {
-            await axios.post(`http://localhost:5001/cart/${productId}`, {}, { withCredentials: true });
+            await api.post(`/cart/${productId}`);
             await fetchCart(); 
             return { success: true };
         } catch (error) {
@@ -34,7 +34,7 @@ export const CartProvider = ({ children }) => {
 
     const updateQuantity = async (productId, quantity) => {
         try {
-            await axios.patch(`http://localhost:5001/cart/${productId}`, { quantity }, { withCredentials: true });
+            await api.patch(`/cart/${productId}`, { quantity });
             await fetchCart(); 
             return { success: true };
         } catch (error) {
@@ -44,7 +44,7 @@ export const CartProvider = ({ children }) => {
 
     const removeFromCart = async (productId) => {
         try {
-            await axios.delete(`http://localhost:5001/cart/${productId}`, { withCredentials: true });
+            await api.delete(`/cart/${productId}`);
             await fetchCart(); 
         } catch (error) {
             console.error("Failed to remove item");

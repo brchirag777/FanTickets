@@ -20,7 +20,10 @@ const Login = () => {
         e.preventDefault();
         setError('');
         try {
-            await api.post('/customers/login', formData);
+            const res = await api.post('/customers/login', formData);
+            if (res.data?.token) {
+                localStorage.setItem('token', res.data.token);
+            }
             if (refreshUser) await refreshUser();
             await fetchCart();
             navigate('/tickets'); 

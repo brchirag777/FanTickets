@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { formatEventDate, formatPrice } from '../utils/format';
@@ -39,11 +39,7 @@ const TicketCard = ({ ticket, isSaved }) => {
         }
         setWishlistLoading(true);
         try {
-            const response = await axios.patch(
-                `http://localhost:5001/wishlist/${ticket._id}/toggle`,
-                {},
-                { withCredentials: true }
-            );
+            const response = await api.patch(`/wishlist/${ticket._id}/toggle`);
             setSaved(response.data.saved);
             window.dispatchEvent(new Event('wishlist-updated'));
         } catch (error) {

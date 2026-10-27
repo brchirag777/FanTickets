@@ -41,6 +41,7 @@ exports.registerCustomer = async (req, res) => {
         res.status(201).json({
             success: true,
             message: "Customer registered successfully",
+            token,
             customer: {
                 _id: customer._id,
                 fullName: customer.fullName,
@@ -81,7 +82,17 @@ exports.loginCustomer = async (req, res) => {
             secure: process.env.NODE_ENV === "production"
         });
 
-        res.status(200).json({ success: true, message: "Login successful" });
+        res.status(200).json({ 
+            success: true, 
+            message: "Login successful",
+            token,
+            customer: {
+                _id: customer._id,
+                fullName: customer.fullName,
+                email: customer.email,
+                phone: customer.phone
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

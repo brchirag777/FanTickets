@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
     // Asks the backend who the current cookie belongs to (401 => logged out)
     const refreshUser = useCallback(async () => {
         try {
-            const response = await axios.get('http://localhost:5001/customers/me', { withCredentials: true });
+            const response = await api.get('/customers/me');
             setUser(response.data);
         } catch (error) {
             setUser(null);
@@ -25,10 +25,11 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            await axios.post('http://localhost:5001/customers/logout', {}, { withCredentials: true });
+            await api.post('/customers/logout');
         } catch (error) {
             console.error("Logout failed", error);
         }
+        localStorage.removeItem('token');
         setUser(null);
     };
 

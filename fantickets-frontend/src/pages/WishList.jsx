@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { formatEventDate, formatPrice } from '../utils/format';
 
 const WishList = () => {
@@ -12,9 +12,7 @@ const WishList = () => {
         setLoading(true);
         setError(false);
         try {
-            const response = await axios.get('http://localhost:5001/wishlist', {
-                withCredentials: true 
-            });
+            const response = await api.get('/wishlist');
             setWishlist(response.data.wishlist || []);
             setLoading(false);
         } catch (err) {
@@ -29,9 +27,7 @@ const WishList = () => {
 
     const handleRemove = async (ticketId) => {
         try {
-            await axios.delete(`http://localhost:5001/wishlist/${ticketId}`, {
-                withCredentials: true
-            });
+            await api.delete(`/wishlist/${ticketId}`);
             setWishlist(wishlist.filter(item => item._id !== ticketId));
             
             // Shout to the NavBar that an item was removed!

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { formatPrice } from '../utils/format';
 
 const Orders = () => {
@@ -12,7 +12,7 @@ const Orders = () => {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const response = await axios.get('http://localhost:5001/orders', { withCredentials: true });
+                const response = await api.get('/orders');
                 setOrders(response.data.orders || []);
             } catch (err) {
                 setError('Failed to load your orders.');

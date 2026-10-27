@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../utils/format';
-import axios from 'axios';
+import api from '../services/api';
 
 const inputClass =
     "w-full p-3 text-white bg-zinc-950 border border-zinc-700 rounded-lg placeholder-zinc-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500";
@@ -77,13 +77,13 @@ const Checkout = () => {
 
         try {
             // Call our backend to create the pending order & Razorpay order
-            const orderRes = await axios.post('http://localhost:5001/orders/create-payment-order', {
+            const orderRes = await api.post('/orders/create-payment-order', {
                 attendeeDetails: {
                     fullName: formData.fullName.trim(),
                     email: formData.email.trim(),
                     govIdLast4: formData.govIdLast4.trim()
                 }
-            }, { withCredentials: true });
+            });
 
             const orderData = orderRes.data;
 
@@ -104,12 +104,12 @@ const Checkout = () => {
                 handler: async function (response) {
                     try {
                         // Verify Payment Signature on backend
-                        const verifyRes = await axios.post('http://localhost:5001/orders/verify-payment', {
+                        const verifyRes = await api.post('/orders/verify-payment', {
                             shopKartOrderId: orderData.shopKartOrderId,
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature
-                        }, { withCredentials: true });
+                        });
 
                         if (verifyRes.data.success) {
                             clearCart();

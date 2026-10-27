@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useCart } from '../context/CartContext'; 
 import { useAuth } from '../context/AuthContext';
 
@@ -19,7 +19,7 @@ const NavBar = () => {
 
         const fetchCount = async () => {
             try {
-                const response = await axios.get('http://localhost:5001/wishlist', { withCredentials: true });
+                const response = await api.get('/wishlist');
                 setWishlistCount(response.data.count || 0);
             } catch (error) {
                 console.error("Failed to fetch wishlist count");

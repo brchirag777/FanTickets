@@ -46,7 +46,10 @@ const Register = () => {
 
         setLoading(true);
         try {
-            await api.post('/customers/register', formData);
+            const res = await api.post('/customers/register', formData);
+            if (res.data?.token) {
+                localStorage.setItem('token', res.data.token);
+            }
             if (refreshUser) await refreshUser();
             if (fetchCart) await fetchCart();
             navigate('/tickets');
